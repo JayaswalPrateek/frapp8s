@@ -1,0 +1,54 @@
+# --- Prometheus Exporter Settings ---
+# Where the exporter will serve its /metrics endpoint.
+prometheus:
+  listen_address: ":9876"       # IP:Port or just :Port. ":9876" means listen on all IPs on port 9876.
+  metrics_path: "/metrics"      # The URL path for Prometheus to scrape. Default is usually /metrics.
+
+# --- Frappe Environment Settings ---
+# How to find and interact with Frappe benches and logs.
+frappe:
+  # [REQUIRED] List of paths to the Frappe bench directories to monitor.
+  # The exporter MUST have read access to these directories, their 'sites' sub-directory,
+  # and their 'logs' sub-directory.
+  benches:
+    - "/home/frappe/frappe-bench"
+    # - "/home/frappe/another-bench" # Add more benches here
+
+  # [REQUIRED] List of log file names to tail within each bench's 'logs' directory.
+  # MUST match the files where Frappe writes SQL logs when logging level 2 is enabled.
+  log_files:
+    - "frappe.log"
+    - "database.log"
+
+  # Hint for the log parser. Options: "json" or "text".
+  # It's HIGHLY recommended to configure Frappe for JSON logging if possible.
+  log_format: "text" # Change to "json" if Frappe is set up for it.
+
+# --- Pipeline & Performance Settings ---
+# Tune how the exporter processes logs.
+pipeline:
+  # Size of the internal buffer (channel) for holding log lines before processing.
+  # Helps absorb bursts but uses more memory.
+  channel_buffer_size: 10000
+
+  # Number of goroutines dedicated to parsing log lines.
+  # Increase this if parsing becomes a bottleneck (CPU-bound).
+  consumer_workers: 4
+
+# --- Parsing & Filtering Settings ---
+# Control what data gets processed and exported.
+parser:
+  # Only process/export metrics for SQL queries taking longer than this (in milliseconds).
+  # Set to 0 to process all queries.
+  min_sql_duration_ms: 0
+  exclude_sites: []
+  exclude_methods: []
+  exclude_doctypes: []
+
+# --- Exporter Internal Logging ---
+# How the 'frapp8s' should log its own activity.
+exporter_logging:
+  # Log level for frapp8s. Options: "debug", "info", "warn", "error".
+  level: "info"
+  # Format for frapp8s logs. Options: "text" or "json".
+  format: "text"
