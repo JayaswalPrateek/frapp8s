@@ -39,13 +39,12 @@ type Config struct {
 	} `mapstructure:"exporter_logging"`
 }
 
-func (c *Config) PrintAsJSON() {
+func (c *Config) ToFormattedJSON() (string, error) {
 	out, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
-		log.Printf("Error marshaling config to JSON for logging: %v", err)
-		return
+		return "", fmt.Errorf("error marshaling config to JSON: %w", err)
 	}
-	log.Print("Configuration:\n" + string(out))
+	return string(out), nil
 }
 
 func LoadConfig(configPath string) (*Config, error) {
@@ -73,12 +72,10 @@ func LoadConfig(configPath string) (*Config, error) {
 
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Printf("Warning: Config file '%s' not found. Using defaults and environment variables.", configPath)
+			log.Printf("Warning: Config file '%s' not found. Using defaults and environment variables", configPath)
 		} else {
 			return nil, fmt.Errorf("failed to read config file '%s': %w", configPath, err)
 		}
-	} else {
-		log.Printf("Successfully loaded config from '%s'", configPath)
 	}
 
 	var cfg Config

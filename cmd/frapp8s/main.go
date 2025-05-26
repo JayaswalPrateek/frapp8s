@@ -2,25 +2,34 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
-	"os"
+	"log/slog"
 
 	"frapp8s/internal/config"
+	"frapp8s/internal/logger"
 )
 
 func main() {
-	log.SetOutput(os.Stdout)
-	log.Println("Starting frapp8s exporter...")
-
-	configPath := flag.String("config", "config.yaml", "Path to the configuration file")
+	configPath := flag.String(
+		"config",
+		"config.yaml",
+		"Path to the configuration file",
+	)
 	flag.Parse()
 
-	log.Printf("Loading configuration from: %s", *configPath)
 	cfg, err := config.LoadConfig(*configPath)
 	if err != nil {
 		log.Fatalf("FATAL: Failed to load config: %v", err)
 	}
 
-	log.Println("Configuration loaded successfully.")
-	cfg.PrintAsJSON() // Print the final config (after defaults, file, env)
+	logger.SetupSlog(cfg)
+
+	slog.Info("Effective Configuration Loaded:")
+	configJSON, err := cfg.ToFormattedJSON()
+	if err == nil {
+		fmt.Println(configJSON)
+	} else {
+		slog.Warn("Could not marshal config to JSON for printing", "error", err)
+	}
 }
