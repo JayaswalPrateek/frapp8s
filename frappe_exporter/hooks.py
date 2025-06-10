@@ -5,6 +5,8 @@ app_description = "export frappe metrics over http"
 app_email = "jayaswalprateek@gmail.com"
 app_license = "gpl-3.0"
 
+api_allowed_methods = {"/api/method/frappe_exporter.api.metrics": ["GET"]}
+
 # Apps
 # ------------------
 
@@ -236,4 +238,3 @@ app_license = "gpl-3.0"
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
-
