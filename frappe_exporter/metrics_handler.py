@@ -1,8 +1,18 @@
 from prometheus_client import CollectorRegistry, Counter, Histogram
+import logging
+
+logger = logging.getLogger("frappe_exporter.metrics_handler")
 
 # Global registry for all app metrics
 # auto_describe=True helps generate HELP strings automatically if not provided
 APP_REGISTRY = CollectorRegistry(auto_describe=True)
+
+FRAPPE_EXCEPTIONS_TOTAL = Counter(
+    "frappe_exceptions_total",
+    "Total number of exceptions caught in Frappe method overrides",
+    ["site", "method", "exception_type"],
+    registry=APP_REGISTRY,
+)
 
 GET_DOC_TOTAL = Counter(
     "frappe_get_doc_total",

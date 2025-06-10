@@ -1,3 +1,4 @@
+from .exception import exportException
 import logging
 import time
 
@@ -65,6 +66,7 @@ def get_doc_wrapper(*args, **kwargs):
             )  # last resort, might cause recursion if patching failed
 
     site = get_current_site()
+    method_name = "get_doc"  # Define method name for use in exception handling
 
     start_time = time.monotonic()
     status = "success"
@@ -72,13 +74,13 @@ def get_doc_wrapper(*args, **kwargs):
     try:
         result_doc = _original_get_doc(*args, **kwargs)
         return result_doc
-    except Exception:
+    except Exception as e:
         status = "error"
+        exportException(e, method_name)
         raise
     finally:
         duration_seconds = time.monotonic() - start_time
-        doctype = extract_doctype_from_args("get_doc", args, kwargs, result_doc)
-
+        doctype = extract_doctype_from_args(method_name, args, kwargs, result_doc)
         GET_DOC_TOTAL.labels(site=site, doctype=doctype, status=status).inc()
         if status == "success":
             GET_DOC_DURATION_SECONDS.labels(site=site, doctype=doctype).observe(
@@ -97,14 +99,16 @@ def get_list_wrapper(*args, **kwargs):
             _original_get_list = frappe.get_list
 
     site = get_current_site()
-    doctype = extract_doctype_from_args("get_list", args, kwargs)
+    method_name = "get_list"
+    doctype = extract_doctype_from_args(method_name, args, kwargs)
 
     start_time = time.monotonic()
     status = "success"
     try:
         return _original_get_list(*args, **kwargs)
-    except Exception:
+    except Exception as e:
         status = "error"
+        exportException(e, method_name)
         raise
     finally:
         duration_seconds = time.monotonic() - start_time
