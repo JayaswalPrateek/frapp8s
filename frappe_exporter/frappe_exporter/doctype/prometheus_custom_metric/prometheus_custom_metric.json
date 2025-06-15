@@ -1,0 +1,51 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "creation": "2025-06-13 15:01:00.123456",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": ["metric_name", "metric_type", "help_text", "label_names"],
+  "fields": [
+    {
+      "fieldname": "metric_name",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "Metric Name",
+      "reqd": 1,
+      "unique": 1,
+      "description": "e.g., my_app_sales_total. Must follow Prometheus naming conventions (letters, numbers, underscores)."
+    },
+    {
+      "fieldname": "metric_type",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "label": "Metric Type",
+      "options": "Counter\nGauge\nHistogram\nSummary",
+      "reqd": 1
+    },
+    {
+      "fieldname": "help_text",
+      "fieldtype": "Small Text",
+      "in_list_view": 1,
+      "label": "Help Text",
+      "reqd": 1
+    },
+    {
+      "fieldname": "label_names",
+      "fieldtype": "Data",
+      "label": "Label Names",
+      "description": "Optional. A comma-separated list of labels, e.g., product,category,region"
+    }
+  ],
+  "istable": 1,
+  "links": [],
+  "modified": "2025-06-13 15:01:00.123456",
+  "modified_by": "Administrator",
+  "module": "Frappe Exporter",
+  "name": "Prometheus Custom Metric",
+  "owner": "Administrator",
+  "permissions": [],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": 1
+}
