@@ -7,6 +7,10 @@ app_license = "gpl-3.0"
 
 api_allowed_methods = {"/api/method/frappe_exporter.api.metrics": ["GET"]}
 
+# --- Global Error Hook ---
+# This hook will be called for any unhandled exception during a request.
+on_error = "frappe_exporter.exception.handle_global_exception"
+
 # Apps
 # ------------------
 
