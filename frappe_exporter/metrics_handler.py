@@ -11,8 +11,8 @@ APP_REGISTRY = CollectorRegistry(auto_describe=True)
 
 FRAPPE_EXCEPTIONS_TOTAL = Counter(
     "frappe_exceptions_total",
-    "Total number of exceptions caught in Frappe method overrides",
-    ["site", "method", "exception_type"],
+    "Total number of exceptions caught by the exporter",
+    ["site", "exception_type", "source"],
     registry=APP_REGISTRY,
 )
 
