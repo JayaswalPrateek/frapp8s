@@ -1,0 +1,30 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "creation": "2025-06-25 11:30:00.2313",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": ["doctype_name"],
+  "fields": [
+    {
+      "fieldname": "doctype_name",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "label": "DocType",
+      "options": "DocType",
+      "reqd": 1
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "istable": 1,
+  "links": [],
+  "modified": "2025-06-25 11:32:10.1213",
+  "modified_by": "Administrator",
+  "module": "Frappe Exporter",
+  "name": "Whitelisted Doctype",
+  "owner": "Administrator",
+  "permissions": [],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "track_changes": 1
+}
