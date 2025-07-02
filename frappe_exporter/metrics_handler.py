@@ -50,7 +50,7 @@ GET_LIST_DURATION_SECONDS = Histogram(
 
 CUSTOM_METRICS = {}
 _init_lock = threading.Lock()
-_custom_metrics_initialized = False  # Flag to control lazy initialization
+_custom_metrics_initialized = False
 
 METRIC_TYPE_MAP = {
     "Counter": Counter,
@@ -87,20 +87,30 @@ def initialize_custom_metrics():
                 "DocType 'Frappe Exporter Settings' not found. Skipping custom metric initialization."
             )
             return
-        settings = frappe.get_single("Frappe Exporter Settings")
+
+        # FIX: Use a more robust method to get settings and child table data separately.
+        settings = frappe.db.get_singles_dict("Frappe Exporter Settings")
+
+        if not settings.get("enabled"):
+            logger.info(
+                "Frappe Exporter is disabled in settings. No custom metrics will be initialized."
+            )
+            return
+
+        # Fetch the child table data using a direct query.
+        custom_metrics_defs = frappe.get_all(
+            "Prometheus Custom Metric",
+            fields=["metric_name", "metric_type", "help_text", "label_names"],
+            parent="Frappe Exporter Settings",
+        )
+
     except Exception as e:
         logger.warning(
             f"Could not get Frappe Exporter Settings. Skipping custom metric initialization. Error: {e}"
         )
         return
 
-    if not settings.enabled:
-        logger.info(
-            "Frappe Exporter is disabled in settings. No custom metrics will be initialized."
-        )
-        return
-
-    for metric_def in settings.custom_metrics:
+    for metric_def in custom_metrics_defs:
         metric_name = metric_def.get("metric_name")
         metric_type = metric_def.get("metric_type")
         help_text = metric_def.get("help_text", "No help text provided.")
@@ -111,7 +121,7 @@ def initialize_custom_metrics():
 
         if not all([metric_name, metric_type]):
             logger.error(
-                f"Skipping custom metric due to missing name or type: {metric_def.as_dict()}"
+                f"Skipping custom metric due to missing name or type: {metric_def}"
             )
             continue
 

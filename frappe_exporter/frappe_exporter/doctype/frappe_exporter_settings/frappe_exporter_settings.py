@@ -26,12 +26,11 @@ class FrappeExporterSettings(Document):
                         )
 
     def on_update(self):
-        # Clear a cache key to signal that settings have changed.
-        # This app reads settings on startup, so a restart is needed for changes
-        # to metric definitions to apply.
-        frappe.cache().delete_key("frappe_exporter_settings_doctypes")
+        # Clear cache keys to signal that settings have changed.
+        frappe.cache().delete_key("frappe_exporter_custom_metrics")
+        frappe.cache().delete_key("frappe_exporter_whitelisted_doctypes")
         frappe.msgprint(
-            "Frappe Exporter settings saved. Changes to metric definitions (adding/removing metrics or labels) will apply after a server restart.",
-            title="Restart Required for Changes",
-            indicator="orange",
+            "Frappe Exporter settings saved. Changes will apply after a server restart or on the next request.",
+            title="Settings Updated",
+            indicator="green",
         )

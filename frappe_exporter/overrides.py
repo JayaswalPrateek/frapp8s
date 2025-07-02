@@ -1,10 +1,7 @@
 from .exception import exportException
 import logging
 import time
-
 import frappe
-
-# Import metrics from metrics_handler
 from .metrics_handler import (
     GET_DOC_DURATION_SECONDS,
     GET_DOC_TOTAL,
@@ -17,6 +14,46 @@ logger = logging.getLogger("frappe_exporter.overrides")
 # Store references to the original Frappe methods
 _original_get_doc = None
 _original_get_list = None
+
+
+def get_whitelisted_doctypes():
+    cached_val = frappe.cache().get_value("frappe_exporter_whitelisted_doctypes")
+    if cached_val:
+        return cached_val
+
+    try:
+        # Using frappe.db.get_singles_dict to avoid triggering get_doc hooks
+        settings = frappe.db.get_singles_dict("Frappe Exporter Settings")
+        if settings.get("enabled") and settings.get("whitelisting_enabled"):
+            # This part is safe as it doesn't trigger hooks
+            whitelisted_docs = frappe.get_all(
+                "Whitelisted Doctype",
+                fields=["doctype_name"],
+                parent="Frappe Exporter Settings",
+            )
+            whitelisted_set = {d.doctype_name for d in whitelisted_docs}
+            result = (True, whitelisted_set)
+        else:
+            # Whitelisting is disabled, so all doctypes are allowed.
+            result = (False, set())
+
+        frappe.cache().set_value("frappe_exporter_whitelisted_doctypes", result)
+        return result
+    except Exception:
+        # If settings don't exist or there's an error, behave as if disabled.
+        return (False, set())
+
+
+def is_doctype_whitelisted(doctype):
+    if not doctype:
+        return False
+
+    enabled, whitelist = get_whitelisted_doctypes()
+
+    if not enabled:
+        return True
+
+    return doctype in whitelist
 
 
 def get_current_site():
@@ -46,80 +83,78 @@ def extract_doctype_from_args(method_name, args, kwargs, result=None):
         and not doctype
     ):
         doctype = result.doctype
-
-    return doctype if doctype else f"unknown_doctype_{method_name}"
+    return doctype if doctype else "unknown_doctype"
 
 
 def get_doc_wrapper(*args, **kwargs):
     global _original_get_doc
-    if not _original_get_doc:  # Safety net if not patched
-        logger.error("Original frappe.get_doc not found for wrapper!")
-        # Attempt to find it dynamically if not set (less ideal)
-        _original_get_doc = (
-            getattr(frappe, "get_doc_original_for_exporter", None) or frappe.get_doc
-        )
-        if not hasattr(
-            frappe.get_doc, "_instrumented_by_exporter"
-        ):  # if it's still not the original
-            _original_get_doc = (
-                frappe.get_doc
-            )  # last resort, might cause recursion if patching failed
+
+    # FIX: During specific system operations, do not process metrics to avoid recursive calls.
+    if frappe.flags.in_migrate or frappe.flags.in_install or frappe.flags.in_patch:
+        return _original_get_doc(*args, **kwargs)
 
     site = get_current_site()
-    method_name = "get_doc"  # Define method name for use in exception handling
-
     start_time = time.monotonic()
     status = "success"
     result_doc = None
+    exception_obj = None
+
     try:
         result_doc = _original_get_doc(*args, **kwargs)
         return result_doc
     except Exception as e:
         status = "error"
-        exportException(e, method_name)
+        exception_obj = e
         raise
     finally:
-        duration_seconds = time.monotonic() - start_time
-        doctype = extract_doctype_from_args(method_name, args, kwargs, result_doc)
-        GET_DOC_TOTAL.labels(site=site, doctype=doctype, status=status).inc()
-        if status == "success":
-            GET_DOC_DURATION_SECONDS.labels(site=site, doctype=doctype).observe(
-                duration_seconds
-            )
+        # This block runs even if an exception is raised
+        doctype = extract_doctype_from_args("get_doc", args, kwargs, result_doc)
+
+        if is_doctype_whitelisted(doctype):
+            GET_DOC_TOTAL.labels(site=site, doctype=doctype, status=status).inc()
+            if status == "success":
+                duration_seconds = time.monotonic() - start_time
+                GET_DOC_DURATION_SECONDS.labels(site=site, doctype=doctype).observe(
+                    duration_seconds
+                )
+
+            if exception_obj:
+                exportException(exception_obj, "get_doc")
 
 
 def get_list_wrapper(*args, **kwargs):
     global _original_get_list
-    if not _original_get_list:
-        logger.error("Original frappe.get_list not found for wrapper!")
-        _original_get_list = (
-            getattr(frappe, "get_list_original_for_exporter", None) or frappe.get_list
-        )
-        if not hasattr(frappe.get_list, "_instrumented_by_exporter"):
-            _original_get_list = frappe.get_list
+
+    # FIX: During specific system operations, do not process metrics to avoid recursive calls.
+    if frappe.flags.in_migrate or frappe.flags.in_install or frappe.flags.in_patch:
+        return _original_get_list(*args, **kwargs)
 
     site = get_current_site()
-    method_name = "get_list"
-    doctype = extract_doctype_from_args(method_name, args, kwargs)
-
+    doctype = extract_doctype_from_args("get_list", args, kwargs)
     start_time = time.monotonic()
     status = "success"
+    exception_obj = None
+
     try:
         return _original_get_list(*args, **kwargs)
     except Exception as e:
         status = "error"
-        exportException(e, method_name)
+        exception_obj = e
         raise
     finally:
-        duration_seconds = time.monotonic() - start_time
-        GET_LIST_TOTAL.labels(site=site, doctype=doctype, status=status).inc()
-        if status == "success":
-            GET_LIST_DURATION_SECONDS.labels(site=site, doctype=doctype).observe(
-                duration_seconds
-            )
+        # This block runs even if an exception is raised
+        if is_doctype_whitelisted(doctype):
+            GET_LIST_TOTAL.labels(site=site, doctype=doctype, status=status).inc()
+            if status == "success":
+                duration_seconds = time.monotonic() - start_time
+                GET_LIST_DURATION_SECONDS.labels(site=site, doctype=doctype).observe(
+                    duration_seconds
+                )
+
+            if exception_obj:
+                exportException(exception_obj, "get_list")
 
 
-# Prevents this function from running its logic more than once per Python process
 _overrides_applied_flag = False
 
 
@@ -130,28 +165,23 @@ def apply_overrides():
 
     logger.info("Applying Frappe method overrides for Prometheus Exporter...")
 
+    # Store original methods
     if hasattr(frappe, "get_doc") and not hasattr(
         frappe.get_doc, "_instrumented_by_exporter"
     ):
         _original_get_doc = frappe.get_doc
-        # setattr(frappe, 'get_doc_original_for_exporter', _original_get_doc)
         frappe.get_doc = get_doc_wrapper
         # Preventing double-wrapping
         setattr(frappe.get_doc, "_instrumented_by_exporter", True)
         logger.info("Instrumented frappe.get_doc")
-    else:
-        logger.warning("frappe.get_doc already instrumented or not found.")
 
     if hasattr(frappe, "get_list") and not hasattr(
         frappe.get_list, "_instrumented_by_exporter"
     ):
         _original_get_list = frappe.get_list
-        # setattr(frappe, 'get_list_original_for_exporter', _original_get_list)
         frappe.get_list = get_list_wrapper
         # Preventing double-wrapping
         setattr(frappe.get_list, "_instrumented_by_exporter", True)
         logger.info("Instrumented frappe.get_list")
-    else:
-        logger.warning("frappe.get_list already instrumented or not found.")
 
     _overrides_applied_flag = True

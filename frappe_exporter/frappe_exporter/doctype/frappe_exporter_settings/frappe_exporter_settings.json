@@ -1,12 +1,16 @@
 {
   "actions": [],
   "allow_rename": 0,
-  "creation": "2025-06-13 15:00:00.123456",
+  "creation": "2025-06-13 15:00:00.8123",
   "doctype": "DocType",
   "engine": "InnoDB",
   "field_order": [
     "section_break_1",
     "enabled",
+    "metric_filtering_section",
+    "whitelisting_enabled",
+    "doctype_whitelisting_html",
+    "whitelisted_doctypes",
     "custom_metrics_section",
     "custom_metrics",
     "api_access_section",
@@ -25,32 +29,32 @@
       "label": "Enable Frappe Exporter"
     },
     {
-      "fieldname": "custom_metrics_section",
+      "fieldname": "metric_filtering_section",
       "fieldtype": "Section Break",
-      "label": "Custom Prometheus Metrics"
+      "label": "Metric Filtering"
     },
     {
-      "fieldname": "custom_metrics",
-      "fieldtype": "Table",
-      "label": "Custom Metrics",
-      "options": "Prometheus Custom Metric"
-    },
-    {
-      "fieldname": "api_access_section",
-      "fieldtype": "Section Break",
-      "label": "API Access"
-    },
-    {
-      "default": "1",
-      "fieldname": "enable_unauthenticated_access",
+      "fieldname": "whitelisting_enabled",
       "fieldtype": "Check",
-      "label": "Allow Unauthenticated Access to /api/method/frappe_exporter.api.metrics",
-      "description": "If unchecked, only users logged into Frappe can access the metrics endpoint."
+      "label": "Enable Doctype Whitelisting",
+      "description": "If checked, metrics and exceptions will only be exported for the DocTypes selected below."
+    },
+    {
+      "fieldname": "doctype_whitelisting_html",
+      "fieldtype": "HTML",
+      "label": "Doctype Whitelisting HTML"
+    },
+    {
+      "fieldname": "whitelisted_doctypes",
+      "fieldtype": "Table",
+      "label": "Whitelisted Doctypes",
+      "options": "Whitelisted Doctype",
+      "depends_on": "eval:doc.whitelisting_enabled"
     }
   ],
   "issingle": 1,
   "links": [],
-  "modified": "2025-06-13 15:00:00.123456",
+  "modified": "2025-06-30 11:35:00.0121",
   "modified_by": "Administrator",
   "module": "Frappe Exporter",
   "name": "Frappe Exporter Settings",
@@ -69,5 +73,6 @@
   ],
   "sort_field": "modified",
   "sort_order": "DESC",
-  "track_changes": 1
+  "track_changes": 1,
+  "client_script_path": "frappe_exporter_settings.js"
 }
